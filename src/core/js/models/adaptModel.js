@@ -394,7 +394,7 @@ define(function (require) {
                 try {
                     var model = Adapt.findById(id);
 
-                    if (!model.get("_isAvailable")) continue;
+                    if (!model.get("_isAvailable") || model.get("_isOptional")) continue;
                     if (!model.get("_isComplete")) return true;
                 }
                 catch (e) {
