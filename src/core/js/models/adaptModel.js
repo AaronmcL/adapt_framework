@@ -24,7 +24,6 @@ define(function (require) {
         initialize: function () {
             // Wait until data is loaded before setting up model
             this.listenToOnce(Adapt, 'app:dataLoaded', this.setupModel);
-
         },
 
         setupModel: function() {
@@ -108,18 +107,24 @@ define(function (require) {
         checkCompletionStatus: function () {
             //defer to allow other change:_isComplete handlers to fire before cascasing to parent
             Adapt.checkingCompletion();
+
             _.defer(_.bind(function() {
                 var isComplete = false;
                 
                 //number of mandatory children that must be complete or -1 for all
                 var requireCompletionOf = this.get("_requireCompletionOf");
-                
+                var availableChildren = this.getAvailableChildren();
+
                 if (requireCompletionOf === -1) {
-                    // Check if any return _isComplete:false
-                    // If not - set this model to _isComplete: true
-                    isComplete = (this.getAvailableChildren().findWhere({_isComplete: false, _isOptional: false}) === undefined);
+                    var allChildrenOptional = availableChildren.findWhere({_isOptional: false}) === undefined;
+
+                    if (allChildrenOptional) {
+                        isComplete = (availableChildren.findWhere({_isComplete: false}) === undefined);
+                    } else {
+                        isComplete = (availableChildren.findWhere({_isComplete: false, _isOptional: false}) === undefined);
+                    }
                 } else {
-                    isComplete = (this.getAvailableChildren().where({_isComplete: true, _isOptional: false}).length >= requireCompletionOf );
+                    isComplete = (availableChildren.where({_isComplete: true, _isOptional: false}).length >= requireCompletionOf);
                 }
     
                 this.set({_isComplete: isComplete});
@@ -131,28 +136,34 @@ define(function (require) {
         checkInteractionCompletionStatus: function () {
             //defer to allow other change:_isInteractionComplete handlers to fire before cascasing to parent
             Adapt.checkingCompletion();
+            
             _.defer(_.bind(function() {
                 var isInteractionComplete = false;
                 
                 //number of mandatory children that must be complete or -1 for all
                 var requireCompletionOf = this.get("_requireCompletionOf");
+                var availableChildren = this.getAvailableChildren();
                 
                 if (requireCompletionOf === -1) {
-                    // Check if any return _isInteractionComplete:false
-                    // If not - set this model to _isInteractionComplete: true
-                    isInteractionComplete = (this.getAvailableChildren().findWhere({_isInteractionComplete: false, _isOptional: false}) === undefined);
+                    var allChildrenOptional = availableChildren.findWhere({_isOptional: false}) === undefined;
+
+                    if (allChildrenOptional) {
+                        isInteractionComplete = (availableChildren.findWhere({_isInteractionComplete: false}) === undefined);
+                    } else {
+                        isInteractionComplete = (availableChildren.findWhere({_isInteractionComplete: false, _isOptional: false}) === undefined);
+                    }
                 } else {
-                    isInteractionComplete = (this.getAvailableChildren().where({_isInteractionComplete: true, _isOptional: false}).length >= requireCompletionOf);
+                    isInteractionComplete = (availableChildren.where({_isInteractionComplete: true, _isOptional: false}).length >= requireCompletionOf);
                 }
     
-                this.set({_isInteractionComplete:isInteractionComplete});
+                this.set({_isInteractionComplete: isInteractionComplete});
+
                 Adapt.checkedCompletion();
 
             }, this));
         },
 
         findAncestor: function (ancestors) {
-
             var parent = this.getParent();
 
             if (this._parent === ancestors) {
@@ -167,11 +178,9 @@ define(function (require) {
 
             // Returns a single model
             return returnedAncestor;
-
         },
 
         findDescendants: function (descendants) {
-
             // first check if descendant is child and return child
             if (this._children === descendants) {
                 return this.getChildren();
@@ -299,7 +308,6 @@ define(function (require) {
         },
 
         setOnChildren: function (key, value, options) {
-
             var args = arguments;
 
             this.set.apply(this, args);
@@ -312,7 +320,6 @@ define(function (require) {
                 var child = models[i];
                 child.setOnChildren.apply(child, args);
             }
-
         },
 
         setOptional: function(value) {
@@ -394,7 +401,7 @@ define(function (require) {
                 try {
                     var model = Adapt.findById(id);
 
-                    if (!model.get("_isAvailable")) continue;
+                    if (!model.get("_isAvailable") || model.get("_isOptional")) continue;
                     if (!model.get("_isComplete")) return true;
                 }
                 catch (e) {
